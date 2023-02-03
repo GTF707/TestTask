@@ -50,6 +50,13 @@ public abstract class AbstractRepository<T> : IRepository<T> where T : Persisten
                 return null;
             }
             Type propertytype = property.GetType();
+            var type = propertytype.GetTypeInfo();
+
+            if (property.PropertyType == typeof(Guid))
+            {
+                continue;
+            }
+
 
             //PropertyInfo propertyInfo = propertytype.GetProperty(property.Name);
 
@@ -62,11 +69,17 @@ public abstract class AbstractRepository<T> : IRepository<T> where T : Persisten
 
 
             var value = property.GetValue(entity);
-            ;
-            if (value != null && propertytype.Name == "update_date" )
-                
-            result = result + (value ?? "null");
-            result = result + ",";
+            if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(string))
+            {
+                result = result + "'" + value + "'";
+            }
+            else
+            {
+                result = result + (value ?? "null");
+            }
+
+            if (properties.Last() != property)
+                result = result + ",";
         }
         return result;
     }
@@ -133,15 +146,21 @@ public abstract class AbstractRepository<T> : IRepository<T> where T : Persisten
     public void Create(T item)
     {
         var tableName = GetTableName();
+
         string result = MapEntity(item);
-        var sql = $"INSERT INTO public.{tableName} values ({result})";
+
+        var sql = $"INSERT INTO public.{tableName}(ip_address,disk_space,cpu,ram_space_free,ram_space_total, is_deleted, create_date, update_date, delete_date) values ({result})";
         using (var connection = new NpgsqlConnection(_connectionString))
         {
+
             DbCommand command = (DbCommand)connection.CreateCommand();
             command.CommandText = sql;
             command.CommandType = CommandType.Text;
+
             connection.Open();
+
             DbDataReader reader = command.ExecuteReader();
+
         }
     }
 
